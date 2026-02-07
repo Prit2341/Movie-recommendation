@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Recommender</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f0f1a;
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 40px 20px;
+            background-image: radial-gradient(ellipse at top, #1a1a3e 0%, #0f0f1a 60%);
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 8px;
+            font-size: 2.4rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #e94560, #c850c0, #4158d0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 35px;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .search-box input {
+            flex: 1;
+            padding: 14px 20px;
+            font-size: 1rem;
+            font-family: 'Inter', sans-serif;
+            border: 1px solid #2a2a4a;
+            border-radius: 12px;
+            background: #16162e;
+            color: #eee;
+            outline: none;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .search-box input:focus {
+            border-color: #e94560;
+            box-shadow: 0 0 0 3px rgba(233, 69, 96, 0.15);
+        }
+
+        .search-box input::placeholder { color: #555; }
+
+        .btn {
+            padding: 14px 22px;
+            font-size: 0.9rem;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            border: none;
+            border-radius: 12px;
+            color: #fff;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.3s;
+            white-space: nowrap;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .btn:active { transform: translateY(0); }
+
+        .btn-search { background: linear-gradient(135deg, #e94560, #c73652); }
+        .btn-recommend { background: linear-gradient(135deg, #4158d0, #5b73e8); }
+        .btn-history { background: linear-gradient(135deg, #0f3460, #1a4a7a); }
+
+        .error {
+            text-align: center;
+            color: #e94560;
+            margin-bottom: 20px;
+            display: none;
+            font-weight: 500;
+            background: rgba(233, 69, 96, 0.08);
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(233, 69, 96, 0.2);
+        }
+
+        .loading {
+            text-align: center;
+            display: none;
+            margin-bottom: 20px;
+            color: #888;
+        }
+
+        .loading::after {
+            content: '';
+            animation: dots 1.5s steps(3, end) infinite;
+        }
+
+        @keyframes dots {
+            0% { content: ''; }
+            33% { content: '.'; }
+            66% { content: '..'; }
+            100% { content: '...'; }
+        }
+
+        /* Movie Detail Card */
+        .movie-detail {
+            display: none;
+            background: linear-gradient(135deg, #16162e 0%, #1a1a3e 100%);
+            padding: 30px;
+            border-radius: 16px;
+            margin-bottom: 20px;
+            border: 1px solid #2a2a4a;
+        }
+
+        .movie-detail h2 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: #fff;
+        }
+
+        .movie-detail .rating-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #f5c518, #e4b008);
+            color: #000;
+            font-weight: 700;
+            font-size: 1.1rem;
+            padding: 6px 14px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .detail-item {
+            background: rgba(255,255,255,0.03);
+            padding: 14px 16px;
+            border-radius: 10px;
+            border: 1px solid #2a2a4a;
+        }
+
+        .detail-item .label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #666;
+            margin-bottom: 4px;
+        }
+
+        .detail-item .value {
+            font-size: 0.95rem;
+            color: #ddd;
+            font-weight: 500;
+        }
+
+        .detail-item.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .genre-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .genre-tag {
+            background: rgba(233, 69, 96, 0.15);
+            color: #e94560;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        /* Cast Section */
+        .cast-section {
+            margin-top: 20px;
+        }
+
+        .cast-section h3 {
+            font-size: 0.95rem;
+            color: #999;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+
+        .cast-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+        }
+
+        .cast-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid #2a2a4a;
+            border-radius: 10px;
+            padding: 12px 14px;
+        }
+
+        .cast-card .cast-name {
+            font-weight: 600;
+            color: #ddd;
+            font-size: 0.9rem;
+        }
+
+        .cast-card .cast-role {
+            font-size: 0.75rem;
+            color: #888;
+            text-transform: capitalize;
+            margin-top: 2px;
+        }
+
+        .cast-card .cast-character {
+            font-size: 0.8rem;
+            color: #c850c0;
+            margin-top: 4px;
+        }
+
+        /* Tables */
+        .table-wrapper {
+            display: none;
+            background: linear-gradient(135deg, #16162e 0%, #1a1a3e 100%);
+            border-radius: 16px;
+            border: 1px solid #2a2a4a;
+            overflow: hidden;
+        }
+
+        .table-wrapper h3 {
+            padding: 20px 24px 0;
+            font-size: 1.1rem;
+            color: #fff;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 14px 24px;
+            text-align: left;
+        }
+
+        th {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #666;
+            border-bottom: 1px solid #2a2a4a;
+            font-weight: 600;
+        }
+
+        td {
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            font-size: 0.9rem;
+        }
+
+        tbody tr {
+            transition: background 0.2s;
+        }
+
+        tbody tr:hover {
+            background: rgba(233, 69, 96, 0.05);
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .similarity-bar {
+            display: inline-block;
+            background: rgba(233, 69, 96, 0.2);
+            border-radius: 4px;
+            height: 6px;
+            width: 60px;
+            position: relative;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+
+        .similarity-bar .fill {
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            background: linear-gradient(90deg, #e94560, #c850c0);
+            border-radius: 4px;
+        }
+
+        .no-match {
+            color: #555;
+            font-style: italic;
+        }
+
+        @media (max-width: 600px) {
+            .search-box { flex-wrap: wrap; }
+            .btn { flex: 1; text-align: center; }
+            .detail-grid { grid-template-columns: 1fr; }
+            th, td { padding: 10px 14px; font-size: 0.8rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Movie Recommender</h1>
+        <p class="subtitle">Search any movie, get recommendations, and track your history</p>
+
+        <div class="search-box">
+            <input type="text" id="movieInput" placeholder="Enter a movie title (e.g. The Dark Knight)" />
+            <button class="btn btn-search" onclick="searchMovie()">Search</button>
+            <button class="btn btn-recommend" onclick="getRecommendations()">Recommend</button>
+            <button class="btn btn-history" onclick="getHistory()">History</button>
+        </div>
+
+        <p class="loading" id="loading">Loading</p>
+        <p class="error" id="error"></p>
+
+        <div class="movie-detail" id="movieDetail">
+            <h2 id="movieDetailTitle"></h2>
+            <div id="movieDetailBody"></div>
+        </div>
+
+        <div class="table-wrapper" id="resultsWrapper">
+            <h3 id="resultsHeading">Recommendations</h3>
+            <table id="results">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Year</th>
+                        <th>Genres</th>
+                        <th>Rating</th>
+                        <th>Similarity</th>
+                    </tr>
+                </thead>
+                <tbody id="resultsBody"></tbody>
+            </table>
+        </div>
+
+        <div class="table-wrapper" id="historyWrapper">
+            <h3>Search History</h3>
+            <table id="historyTable">
+                <thead>
+                    <tr>
+                        <th>Search Query</th>
+                        <th>Matched Movie</th>
+                        <th>Time</th>
+                    </tr>
+                </thead>
+                <tbody id="historyBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "http://localhost:5000";
+
+        document.getElementById("movieInput").addEventListener("keydown", function (e) {
+            if (e.key === "Enter") searchMovie();
+        });
+
+        function hideAll() {
+            document.getElementById("error").style.display = "none";
+            document.getElementById("movieDetail").style.display = "none";
+            document.getElementById("resultsWrapper").style.display = "none";
+            document.getElementById("historyWrapper").style.display = "none";
+        }
+
+        function formatGenres(genres) {
+            if (!genres) return '<span class="no-match">N/A</span>';
+            return genres.split(",").map(g =>
+                `<span class="genre-tag">${g.trim()}</span>`
+            ).join("");
+        }
+
+        async function searchMovie() {
+            const title = document.getElementById("movieInput").value.trim();
+            if (!title) return;
+
+            const loading = document.getElementById("loading");
+            loading.style.display = "block";
+            hideAll();
+
+            try {
+                const res = await fetch(`${API_URL}/search?title=${encodeURIComponent(title)}`);
+
+                if (!res.ok) {
+                    const data = await res.json();
+                    throw new Error(data.detail || "Something went wrong");
+                }
+
+                const movie = await res.json();
+
+                document.getElementById("movieDetailTitle").textContent =
+                    `${movie.primaryTitle} (${movie.startYear ? Math.round(movie.startYear) : "N/A"})`;
+
+                const ratingHtml = movie.averageRating
+                    ? `<span class="rating-badge">${movie.averageRating} / 10</span>`
+                    : '';
+
+                const runtime = movie.runtimeMinutes
+                    ? `${Math.floor(movie.runtimeMinutes / 60)}h ${movie.runtimeMinutes % 60}m`
+                    : "N/A";
+
+                let castHtml = '';
+                if (movie.cast && movie.cast.length > 0) {
+                    const cards = movie.cast.map(c => {
+                        let charText = '';
+                        if (c.characters) {
+                            try {
+                                const parsed = JSON.parse(c.characters);
+                                charText = Array.isArray(parsed) ? parsed.join(", ") : c.characters;
+                            } catch { charText = c.characters; }
+                        }
+                        return `<div class="cast-card">
+                            <div class="cast-name">${c.name}</div>
+                            <div class="cast-role">${c.role}</div>
+                            ${charText ? `<div class="cast-character">${charText}</div>` : ''}
+                        </div>`;
+                    }).join("");
+                    castHtml = `<div class="cast-section"><h3>Cast & Crew</h3><div class="cast-grid">${cards}</div></div>`;
+                }
+
+                document.getElementById("movieDetailBody").innerHTML = `
+                    ${ratingHtml}
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <div class="label">IMDb ID</div>
+                            <div class="value">${movie.tconst}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="label">Year</div>
+                            <div class="value">${movie.startYear ? Math.round(movie.startYear) : "N/A"}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="label">Runtime</div>
+                            <div class="value">${runtime}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="label">Votes</div>
+                            <div class="value">${movie.numVotes ? movie.numVotes.toLocaleString() : "N/A"}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="label">Director(s)</div>
+                            <div class="value">${movie.director_names || "N/A"}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="label">Original Title</div>
+                            <div class="value">${movie.originalTitle || movie.primaryTitle}</div>
+                        </div>
+                        <div class="detail-item full-width">
+                            <div class="label">Genres</div>
+                            <div class="value genre-tags">${formatGenres(movie.genres)}</div>
+                        </div>
+                    </div>
+                    ${castHtml}
+                `;
+
+                document.getElementById("movieDetail").style.display = "block";
+            } catch (err) {
+                document.getElementById("error").textContent = err.message;
+                document.getElementById("error").style.display = "block";
+            } finally {
+                loading.style.display = "none";
+            }
+        }
+
+        async function getRecommendations() {
+            const title = document.getElementById("movieInput").value.trim();
+            if (!title) return;
+
+            const loading = document.getElementById("loading");
+            const tbody = document.getElementById("resultsBody");
+            loading.style.display = "block";
+            hideAll();
+            tbody.innerHTML = "";
+
+            try {
+                const res = await fetch(`${API_URL}/recommend?title=${encodeURIComponent(title)}`);
+
+                if (!res.ok) {
+                    const data = await res.json();
+                    throw new Error(data.detail || "Something went wrong");
+                }
+
+                const movies = await res.json();
+
+                document.getElementById("resultsHeading").textContent = `Recommendations for "${title}"`;
+
+                movies.forEach(movie => {
+                    const sim = (movie.similarity * 100).toFixed(1);
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+                        <td>${movie.primaryTitle}</td>
+                        <td>${movie.startYear ? Math.round(movie.startYear) : "N/A"}</td>
+                        <td>${movie.genres || "N/A"}</td>
+                        <td>${movie.averageRating || "N/A"}</td>
+                        <td>
+                            <span class="similarity-bar"><span class="fill" style="width:${sim}%"></span></span>
+                            ${sim}%
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+                document.getElementById("resultsWrapper").style.display = "block";
+            } catch (err) {
+                document.getElementById("error").textContent = err.message;
+                document.getElementById("error").style.display = "block";
+            } finally {
+                loading.style.display = "none";
+            }
+        }
+
+        async function getHistory() {
+            const loading = document.getElementById("loading");
+            const historyBody = document.getElementById("historyBody");
+            loading.style.display = "block";
+            hideAll();
+            historyBody.innerHTML = "";
+
+            try {
+                const res = await fetch(`${API_URL}/history`);
+
+                if (!res.ok) {
+                    const data = await res.json();
+                    throw new Error(data.detail || "Something went wrong");
+                }
+
+                const history = await res.json();
+
+                if (history.length === 0) {
+                    document.getElementById("error").textContent = "No search history yet.";
+                    document.getElementById("error").style.display = "block";
+                    return;
+                }
+
+                history.forEach(entry => {
+                    const row = document.createElement("tr");
+                    const time = new Date(entry.searched_at).toLocaleString();
+                    row.innerHTML = `
+                        <td>${entry.search_query}</td>
+                        <td>${entry.matched_title || '<span class="no-match">No match</span>'}</td>
+                        <td>${time}</td>
+                    `;
+                    historyBody.appendChild(row);
+                });
+
+                document.getElementById("historyWrapper").style.display = "block";
+            } catch (err) {
+                document.getElementById("error").textContent = err.message;
+                document.getElementById("error").style.display = "block";
+            } finally {
+                loading.style.display = "none";
+            }
+        }
+    </script>
+</body>
+</html>
