@@ -1,0 +1,57 @@
+services:
+  db:
+    image: postgres:16
+    container_name: db
+    environment:
+      POSTGRES_USER: imdb
+      POSTGRES_PASSWORD: imdb
+      POSTGRES_DB: imdb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+
+  model:
+    build:
+      context: .
+      dockerfile: model/Dockerfile
+    container_name: model-trainer
+    environment:
+      DATABASE_URL: postgresql://imdb:imdb@db:5432/imdb
+    volumes:
+      - model_artifacts:/app/model/models
+    restart: "no"
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: backend
+    environment:
+      DATABASE_URL: postgresql://imdb:imdb@db:5432/imdb
+    volumes:
+      - model_artifacts:/app/model/models
+    ports:
+      - "5000:5000"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    ports:
+      - "3000:80"
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@gmail.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+
+volumes:
+  postgres_data:
+  model_artifacts:
