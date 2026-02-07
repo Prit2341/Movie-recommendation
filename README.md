@@ -178,22 +178,22 @@ To connect pgAdmin to the database, add a new server with host `db`, port `5432`
 ### Stop all containers
 
 ```bash
-docker stop backend frontend db pgadmin
+docker stop backend frontend model-trainer db pgadmin
 ```
 
 ### Start all containers again
 
 ```bash
 docker start db
-docker start backend frontend pgadmin
+docker start backend frontend model-trainer pgadmin
 ```
 
 > Start `db` first so the backend can connect to PostgreSQL on startup.
 
-### Remove all containers (full cleanup)
+### Remove all containers and start fresh
 
 ```bash
-docker rm -f backend frontend db pgadmin
+docker rm -f backend frontend model-trainer db pgadmin
 docker network rm mlops-bridge
 ```
 
@@ -202,6 +202,7 @@ docker network rm mlops-bridge
 ```bash
 docker logs backend
 docker logs frontend
+docker logs model-trainer
 docker logs db
 docker logs pgadmin
 ```
