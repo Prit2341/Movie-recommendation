@@ -140,8 +140,14 @@ docker run -d --name model-trainer --network mlops-bridge -v "${PWD}/model/model
 
 ### 6. Start the backend
 
+CMD:
 ```bash
 docker run -d --name backend --network mlops-bridge -v "%cd%/model/models:/app/model/models" -e DATABASE_URL=postgresql://<your_user>:<your_password>@db:5432/<your_db> -p 5000:5000 mlops-backend
+```
+
+PowerShell:
+```bash
+docker run -d --name backend --network mlops-bridge -v "${PWD}/model/models:/app/model/models" -e DATABASE_URL=postgresql://<your_user>:<your_password>@db:5432/<your_db> -p 5000:5000 mlops-backend
 ```
 
 ### 7. Start the frontend
@@ -206,10 +212,18 @@ docker logs pgadmin
 
 Rebuild the backend image and restart the container:
 
+CMD:
 ```bash
 docker rm -f backend
 docker build -t mlops-backend -f Dockerfile .
 docker run -d --name backend --network mlops-bridge -v "%cd%/model/models:/app/model/models" -e DATABASE_URL=postgresql://<your_user>:<your_password>@db:5432/<your_db> -p 5000:5000 mlops-backend
+```
+
+PowerShell:
+```bash
+docker rm -f backend
+docker build -t mlops-backend -f Dockerfile .
+docker run -d --name backend --network mlops-bridge -v "${PWD}/model/models:/app/model/models" -e DATABASE_URL=postgresql://<your_user>:<your_password>@db:5432/<your_db> -p 5000:5000 mlops-backend
 ```
 
 ### After changing frontend code (`frontend/`)
@@ -226,9 +240,19 @@ docker run -d --name frontend --network mlops-bridge -p 3000:80 mlops-frontend
 
 Rebuild the model image and retrain:
 
+CMD:
 ```bash
 docker build -t mlops-model -f model/Dockerfile .
-docker run --rm --name model-trainer --network mlops-bridge -v "%cd%/model/models:/app/model/models" -e DATABASE_URL=postgresql://<your_user>:<your_password>@db:5432/<your_db> mlops-model
+docker rm -f model-trainer
+docker run -d --name model-trainer --network mlops-bridge -v "%cd%/model/models:/app/model/models" -e DATABASE_URL=postgresql://<your_user>:<your_password>@db:5432/<your_db> mlops-model sh -c "python model/train_model.py && tail -f /dev/null"
+docker restart backend
+```
+
+PowerShell:
+```bash
+docker build -t mlops-model -f model/Dockerfile .
+docker rm -f model-trainer
+docker run -d --name model-trainer --network mlops-bridge -v "${PWD}/model/models:/app/model/models" -e DATABASE_URL=postgresql://<your_user>:<your_password>@db:5432/<your_db> mlops-model sh -c "python model/train_model.py && tail -f /dev/null"
 docker restart backend
 ```
 
