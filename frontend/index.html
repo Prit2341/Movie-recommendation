@@ -315,6 +315,29 @@
             font-style: italic;
         }
 
+        .fuzzy-hint {
+            text-align: center;
+            margin-bottom: 16px;
+            padding: 12px 20px;
+            background: rgba(200, 80, 192, 0.1);
+            border: 1px solid rgba(200, 80, 192, 0.25);
+            border-radius: 10px;
+            color: #c850c0;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .fuzzy-hint a {
+            color: #e94560;
+            cursor: pointer;
+            font-weight: 600;
+            text-decoration: underline;
+        }
+
+        .fuzzy-hint a:hover {
+            color: #fff;
+        }
+
         @media (max-width: 600px) {
             .search-box { flex-wrap: wrap; }
             .btn { flex: 1; text-align: center; }
@@ -337,6 +360,7 @@
 
         <p class="loading" id="loading">Loading</p>
         <p class="error" id="error"></p>
+        <div class="fuzzy-hint" id="fuzzyHint"></div>
 
         <div class="movie-detail" id="movieDetail">
             <h2 id="movieDetailTitle"></h2>
@@ -383,6 +407,7 @@
 
         function hideAll() {
             document.getElementById("error").style.display = "none";
+            document.getElementById("fuzzyHint").style.display = "none";
             document.getElementById("movieDetail").style.display = "none";
             document.getElementById("resultsWrapper").style.display = "none";
             document.getElementById("historyWrapper").style.display = "none";
@@ -478,6 +503,12 @@
                     ${castHtml}
                 `;
 
+                if (movie.fuzzy_match) {
+                    const hint = document.getElementById("fuzzyHint");
+                    hint.innerHTML = `Showing results for <a onclick="document.getElementById('movieInput').value='${movie.primaryTitle.replace(/'/g, "\\'")}'; searchMovie();">${movie.primaryTitle}</a> (you searched: "${movie.searched_query}")`;
+                    hint.style.display = "block";
+                }
+
                 document.getElementById("movieDetail").style.display = "block";
             } catch (err) {
                 document.getElementById("error").textContent = err.message;
@@ -505,9 +536,17 @@
                     throw new Error(data.detail || "Something went wrong");
                 }
 
-                const movies = await res.json();
+                const data = await res.json();
+                const movies = data.recommendations;
+                const actualTitle = data.matched_title;
 
-                document.getElementById("resultsHeading").textContent = `Recommendations for "${title}"`;
+                if (data.fuzzy_match) {
+                    const hint = document.getElementById("fuzzyHint");
+                    hint.innerHTML = `Showing recommendations for <a onclick="document.getElementById('movieInput').value='${actualTitle.replace(/'/g, "\\'")}'; getRecommendations();">${actualTitle}</a> (you searched: "${title}")`;
+                    hint.style.display = "block";
+                }
+
+                document.getElementById("resultsHeading").textContent = `Recommendations for "${actualTitle}"`;
 
                 movies.forEach(movie => {
                     const sim = (movie.similarity * 100).toFixed(1);

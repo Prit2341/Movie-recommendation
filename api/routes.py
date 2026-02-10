@@ -5,11 +5,24 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi import APIRouter, HTTPException, Query
 from sklearn.metrics.pairwise import cosine_similarity
+from rapidfuzz import process, fuzz
 from model.loader import movies, tfidf_matrix
 from database.history import save_search, get_search_history
 from database.connection import get_connection
 
 router = APIRouter()
+
+# Pre-compute list of titles for fuzzy matching
+_all_titles = movies["primaryTitle"].tolist()
+
+
+def fuzzy_find(title: str, score_cutoff: int = 50):
+    """Find the closest matching movie title using fuzzy matching."""
+    result = process.extractOne(title, _all_titles, scorer=fuzz.WRatio, score_cutoff=score_cutoff)
+    if result is None:
+        return None
+    matched_title, score, index = result
+    return matched_title
 
 
 @router.get("/health")
@@ -19,10 +32,20 @@ def health():
 
 @router.get("/recommend")
 def recommend(title: str, n: int = 10):
+    fuzzy_used = False
+    matched_title = title
+
     matches = movies[movies["primaryTitle"].str.lower() == title.lower()]
 
     if matches.empty:
         matches = movies[movies["primaryTitle"].str.contains(title, case=False, na=False)]
+
+    if matches.empty:
+        fuzzy_match = fuzzy_find(title)
+        if fuzzy_match:
+            matches = movies[movies["primaryTitle"].str.lower() == fuzzy_match.lower()]
+            fuzzy_used = True
+            matched_title = fuzzy_match
 
     if matches.empty:
         raise HTTPException(status_code=404, detail="Movie not found")
@@ -43,15 +66,28 @@ def recommend(title: str, n: int = 10):
 
     results["similarity"] = sim_scores[top_indices]
 
-    return results.to_dict(orient="records")
+    response = {
+        "recommendations": results.to_dict(orient="records"),
+        "matched_title": matched_title,
+        "fuzzy_match": fuzzy_used,
+    }
+    return response
 
 
 @router.get("/search")
 def search_movie(title: str = Query(..., description="Movie title to search for")):
+    fuzzy_used = False
+
     matches = movies[movies["primaryTitle"].str.lower() == title.lower()]
 
     if matches.empty:
         matches = movies[movies["primaryTitle"].str.contains(title, case=False, na=False)]
+
+    if matches.empty:
+        fuzzy_match = fuzzy_find(title)
+        if fuzzy_match:
+            matches = movies[movies["primaryTitle"].str.lower() == fuzzy_match.lower()]
+            fuzzy_used = True
 
     if matches.empty:
         try:
@@ -112,6 +148,10 @@ def search_movie(title: str = Query(..., description="Movie title to search for"
         result["originalTitle"] = None
         result["runtimeMinutes"] = None
         result["cast"] = []
+
+    if fuzzy_used:
+        result["fuzzy_match"] = True
+        result["searched_query"] = title
 
     return result
 
