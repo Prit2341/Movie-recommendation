@@ -11,6 +11,10 @@ services:
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "5432:5432"
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - internal
 
   model:
     build:
@@ -22,6 +26,10 @@ services:
     volumes:
       - model_artifacts:/app/model/models
     restart: "no"
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - internal
 
   backend:
     build:
@@ -31,9 +39,16 @@ services:
     environment:
       DATABASE_URL: postgresql://imdb:imdb@db:5432/imdb
     volumes:
-      - model_artifacts:/app/model/models
+      - model_artifacts:/app/model/models:ro
     ports:
       - "5000:5000"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - internal
 
   frontend:
     build:
@@ -42,6 +57,15 @@ services:
     container_name: frontend
     ports:
       - "3000:80"
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx
+      - /var/run
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - internal
 
   pgadmin:
     image: dpage/pgadmin4
@@ -51,7 +75,16 @@ services:
       PGADMIN_DEFAULT_PASSWORD: admin
     ports:
       - "5050:80"
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - internal
 
 volumes:
   postgres_data:
   model_artifacts:
+
+networks:
+  internal:
+    driver: bridge
+    internal: true
