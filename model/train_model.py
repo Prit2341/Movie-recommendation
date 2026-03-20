@@ -43,8 +43,16 @@ print(f"Loaded {len(movies):,} movies from PostgreSQL")
 print(movies.head())
 
 # ── 2. Build TF-IDF matrix ──────────────────────────────────────────────────
+# sublinear_tf dampens high-frequency terms; bigrams capture genre combos
+# like "action thriller"; max_features keeps memory manageable.
 
-tfidf = TfidfVectorizer(stop_words="english")
+tfidf = TfidfVectorizer(
+    stop_words="english",
+    sublinear_tf=True,
+    ngram_range=(1, 2),
+    max_features=50_000,
+    min_df=2,
+)
 tfidf_matrix = tfidf.fit_transform(movies["soup"])
 
 print(f"TF-IDF matrix shape: {tfidf_matrix.shape}")
